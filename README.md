@@ -1,4 +1,12 @@
 == spring-boot-starter.forge-addon
+
+
+[![Build Status](https://travis-ci.org/FunThomas424242/spring-boot-starter.svg?branch=master)](https://travis-ci.org/FunThomas424242/spring-boot-starter)
+
+
+
+
+
 :idprefix: id_ 
 (choose one, do not modify, then add a second sentence with a brief description, starting with - "The spring-boot-starter.forge-addon addon enables blah blah...)
 This addon provides *standalone* functionality, and *exports services* for use in other addons. 
