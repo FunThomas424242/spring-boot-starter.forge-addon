@@ -3,42 +3,48 @@ package gh.funthomas424242.forge.addon;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
 import org.jboss.forge.addon.maven.projects.MavenBuildSystem;
+import org.jboss.forge.addon.parser.java.facets.JavaCompilerFacet;
+import org.jboss.forge.addon.parser.java.facets.JavaSourceFacet;
 import org.jboss.forge.addon.projects.Project;
 import org.jboss.forge.addon.projects.ProjectFacet;
 import org.jboss.forge.addon.projects.ProjectFactory;
+import org.jboss.forge.addon.projects.facets.MetadataFacet;
 import org.jboss.forge.addon.projects.facets.ResourcesFacet;
-import org.jboss.forge.addon.resource.DirectoryResource;
 import org.jboss.forge.addon.resource.Resource;
 import org.jboss.forge.addon.resource.ResourceFactory;
 import org.jboss.forge.addon.ui.command.AbstractUICommand;
 import org.jboss.forge.addon.ui.context.UIBuilder;
 import org.jboss.forge.addon.ui.context.UIContext;
 import org.jboss.forge.addon.ui.context.UIExecutionContext;
-import org.jboss.forge.addon.ui.input.InputComponentFactory;
+import org.jboss.forge.addon.ui.input.UIInput;
 import org.jboss.forge.addon.ui.metadata.UICommandMetadata;
+import org.jboss.forge.addon.ui.metadata.WithAttributes;
+import org.jboss.forge.addon.ui.output.UIOutput;
 import org.jboss.forge.addon.ui.result.Result;
 import org.jboss.forge.addon.ui.result.Results;
 import org.jboss.forge.addon.ui.util.Categories;
 import org.jboss.forge.addon.ui.util.Metadata;
-import org.jboss.forge.furnace.addons.AddonRegistry;
 
 public class ProjectSetup extends AbstractUICommand {
 
 	// public static final String PROJECT_CLASSIFIER = "testproject";
 
 	@Inject
-	ResourceFactory resourceFactory;
+	protected ResourceFactory resourceFactory;
 
 	@Inject
-	private ProjectFactory projectFactory;
+	protected ProjectFactory projectFactory;
 
 	@Inject
-	private MavenBuildSystem buildSystem;
+	protected MavenBuildSystem buildSystem;
+
+	@Inject
+	@WithAttributes(label = "Artifact ID:", required = true)
+	protected UIInput<String> artifactId;
 
 	@Override
 	public UICommandMetadata getMetadata(UIContext context) {
@@ -51,36 +57,51 @@ public class ProjectSetup extends AbstractUICommand {
 	public void initializeUI(UIBuilder builder) throws Exception {
 
 		// add the inputs
+		builder.add(artifactId);
 
 	}
 
 	@Override
 	public Result execute(UIExecutionContext context) throws Exception {
 
+		final String newArtifactId=artifactId.getValue();
+		
+		final UIOutput log = context.getUIContext().getProvider().getOutput();
+		log.info(log.out(),
+				"Erstelle Projekt: " + newArtifactId);
+		final File dir = new File(newArtifactId);
+		dir.mkdirs();
+		
+
 		// AddonRegistry registry = ...
 		// Imported<InputComponentFactory> imported =
 		// registry.getServices(InputComponentFactory.class);
 		// InputComponentFactory factory = imported.get();
 
-		System.out.println("Beginne mit Projekt anlegen");
+		//System.out.println("Display UI: " + projectName);
+		//final String newProjectName = projectName.getValue().toString();
+		//System.out.println("Erstelle Projekt " + newProjectName);
 
-		final File dir = new File("testproject");
-		dir.mkdirs();
 
 		final Resource<File> projectDir = resourceFactory.create(dir);
-		System.out.println("Projekt Folder" + projectDir);
+		log.info(log.out(),"Verwende als Projektverzeichnis " + projectDir);
 
-		final DirectoryResource location = projectDir.reify(
-				DirectoryResource.class).getOrCreateChildDirectory("test2");
-		System.out.println("Location directory" + location);
-		
-		
+//		final DirectoryResource location = projectDir.reify(
+//				DirectoryResource.class).getOrCreateChildDirectory("test2");
+//		System.out.println("Location directory" + location);
+
 		List<Class<? extends ProjectFacet>> facets = new ArrayList<>();
 		facets.add(ResourcesFacet.class);
-		// facets.add(MetadataFacet.class);
-		// facets.addAll(Arrays.asList(requiredProjectFacets));
-		Project project = projectFactory.createProject(location, buildSystem,
+		facets.add(MetadataFacet.class);
+		facets.add(JavaSourceFacet.class);
+		facets.add(JavaCompilerFacet.class);
+		final Project project = projectFactory.createProject(projectDir, buildSystem,
 				facets);
+		
+		
+		final MetadataFacet metadata = project.getFacet(MetadataFacet.class);
+		metadata.setProjectName(newArtifactId);
+		
 
 		return Results
 				.success("Command 'create-spring-boot-starter-project' successfully executed!");
