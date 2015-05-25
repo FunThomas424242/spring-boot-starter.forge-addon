@@ -1,10 +1,6 @@
 == spring-boot-starter.forge-addon
 
-
-[![Build Status](https://travis-ci.org/FunThomas424242/spring-boot-starter.svg?branch=master)](https://travis-ci.org/FunThomas424242/spring-boot-starter)
-
-
-
+[![Build Status](https://travis-ci.org/FunThomas424242/spring-boot-starter.forge-addon.svg?branch=master)](https://travis-ci.org/FunThomas424242/spring-boot-starter.forge-addon)
 
 
 :idprefix: id_ 
