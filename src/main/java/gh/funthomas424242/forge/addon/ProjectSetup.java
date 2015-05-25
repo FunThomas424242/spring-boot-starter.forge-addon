@@ -3,6 +3,7 @@ package gh.funthomas424242.forge.addon;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
@@ -18,11 +19,13 @@ import org.jboss.forge.addon.ui.command.AbstractUICommand;
 import org.jboss.forge.addon.ui.context.UIBuilder;
 import org.jboss.forge.addon.ui.context.UIContext;
 import org.jboss.forge.addon.ui.context.UIExecutionContext;
+import org.jboss.forge.addon.ui.input.InputComponentFactory;
 import org.jboss.forge.addon.ui.metadata.UICommandMetadata;
 import org.jboss.forge.addon.ui.result.Result;
 import org.jboss.forge.addon.ui.result.Results;
 import org.jboss.forge.addon.ui.util.Categories;
 import org.jboss.forge.addon.ui.util.Metadata;
+import org.jboss.forge.furnace.addons.AddonRegistry;
 
 public class ProjectSetup extends AbstractUICommand {
 
@@ -30,7 +33,7 @@ public class ProjectSetup extends AbstractUICommand {
 
 	@Inject
 	ResourceFactory resourceFactory;
-	
+
 	@Inject
 	private ProjectFactory projectFactory;
 
@@ -46,13 +49,32 @@ public class ProjectSetup extends AbstractUICommand {
 
 	@Override
 	public void initializeUI(UIBuilder builder) throws Exception {
+
+		// add the inputs
+
+	}
+
+	@Override
+	public Result execute(UIExecutionContext context) throws Exception {
+
+		// AddonRegistry registry = ...
+		// Imported<InputComponentFactory> imported =
+		// registry.getServices(InputComponentFactory.class);
+		// InputComponentFactory factory = imported.get();
+
+		System.out.println("Beginne mit Projekt anlegen");
+
+		final File dir = new File("testproject");
+		dir.mkdirs();
+
+		final Resource<File> projectDir = resourceFactory.create(dir);
+		System.out.println("Projekt Folder" + projectDir);
+
+		final DirectoryResource location = projectDir.reify(
+				DirectoryResource.class).getOrCreateChildDirectory("test2");
+		System.out.println("Location directory" + location);
 		
-		final Resource<File> projectDir = resourceFactory.create(new File("testproject"));
-
-		final DirectoryResource location = projectDir
-				.reify(DirectoryResource.class)
-				.getOrCreateChildDirectory("test2");
-
+		
 		List<Class<? extends ProjectFacet>> facets = new ArrayList<>();
 		facets.add(ResourcesFacet.class);
 		// facets.add(MetadataFacet.class);
@@ -60,10 +82,6 @@ public class ProjectSetup extends AbstractUICommand {
 		Project project = projectFactory.createProject(location, buildSystem,
 				facets);
 
-	}
-
-	@Override
-	public Result execute(UIExecutionContext context) throws Exception {
 		return Results
 				.success("Command 'create-spring-boot-starter-project' successfully executed!");
 	}
