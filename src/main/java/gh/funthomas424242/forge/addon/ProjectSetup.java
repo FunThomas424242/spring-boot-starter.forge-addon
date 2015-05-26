@@ -2,17 +2,19 @@ package gh.funthomas424242.forge.addon;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import javax.enterprise.inject.Default;
 import javax.inject.Inject;
 
 import org.jboss.forge.addon.maven.projects.MavenBuildSystem;
+import org.jboss.forge.addon.maven.projects.MavenPluginFacet;
 import org.jboss.forge.addon.parser.java.facets.JavaCompilerFacet;
 import org.jboss.forge.addon.parser.java.facets.JavaSourceFacet;
 import org.jboss.forge.addon.projects.Project;
 import org.jboss.forge.addon.projects.ProjectFacet;
 import org.jboss.forge.addon.projects.ProjectFactory;
+import org.jboss.forge.addon.projects.facets.DependencyFacet;
 import org.jboss.forge.addon.projects.facets.MetadataFacet;
 import org.jboss.forge.addon.projects.facets.ResourcesFacet;
 import org.jboss.forge.addon.resource.Resource;
@@ -22,6 +24,7 @@ import org.jboss.forge.addon.ui.context.UIBuilder;
 import org.jboss.forge.addon.ui.context.UIContext;
 import org.jboss.forge.addon.ui.context.UIExecutionContext;
 import org.jboss.forge.addon.ui.input.UIInput;
+import org.jboss.forge.addon.ui.input.UISelectMany;
 import org.jboss.forge.addon.ui.metadata.UICommandMetadata;
 import org.jboss.forge.addon.ui.metadata.WithAttributes;
 import org.jboss.forge.addon.ui.output.UIOutput;
@@ -43,32 +46,33 @@ public class ProjectSetup extends AbstractUICommand {
 	@Inject
 	protected MavenBuildSystem buildSystem;
 
-	///////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////
 	//
 	// Definition of interactive inputs (parameters)
 	//
-	///////////////////////////////////////////////////////////////////////////
-	
+	// /////////////////////////////////////////////////////////////////////////
+
 	@Inject
 	@WithAttributes(label = "Bitten drücken Sie y und Bestätigen Sie mit Enter", required = true)
 	// only to go into the interactive mode
 	protected UIInput<String> seemless;
 
-	
 	@Inject
-	@WithAttributes(label = "Group ID:", required = true, defaultValue="gh.funthomas424242.springboot")
+	@WithAttributes(label = "Group ID:", required = true, defaultValue = "gh.funthomas424242.springboot")
 	protected UIInput<String> groupId;
 
-	
 	@Inject
-	@WithAttributes(label = "Artifact ID:", required = true, defaultValue="spring-boot-starter-specificname")
+	@WithAttributes(label = "Artifact ID:", required = true, defaultValue = "spring-boot-starter-specificname")
 	protected UIInput<String> artifactId;
 
 	@Inject
-	@WithAttributes(label = "Version:", required = true, defaultValue="1.0.0-SNAPSHOT")
+	@WithAttributes(label = "Version:", required = true, defaultValue = "1.0.0-SNAPSHOT")
 	protected UIInput<String> version;
 
-	
+	@Inject
+	@WithAttributes(label = "Dependencies", required = true)
+	private UISelectMany<String> dependencies;
+
 	@Override
 	public UICommandMetadata getMetadata(UIContext context) {
 		return Metadata.forCommand(ProjectSetup.class)
@@ -79,58 +83,62 @@ public class ProjectSetup extends AbstractUICommand {
 	@Override
 	public void initializeUI(UIBuilder builder) throws Exception {
 
+		dependencies.setValueChoices(Arrays.asList("A", "B", "C", "AA", "BB")).setNote("Auswahl der Abhängigkeiten");
+		
 		// add the inputs
 		builder.add(seemless);
 		builder.add(groupId);
 		builder.add(artifactId);
 		builder.add(version);
+		builder.add(dependencies);
 	}
 
 	@Override
 	public Result execute(UIExecutionContext context) throws Exception {
 
+		final String projectGroupId = groupId.getValue();
+		final String projectArtifactId = artifactId.getValue();
+		final String projectVersion = version.getValue();
 
-		final String projectGroupId=groupId.getValue();
-		final String projectArtifactId=artifactId.getValue();
-		final String projectVersion=version.getValue();
-		
 		final UIOutput log = context.getUIContext().getProvider().getOutput();
-		log.info(log.out(),
-				"Erstelle Projekt: " + projectArtifactId);
+		log.info(log.out(), "Erstelle Projekt: " + projectArtifactId);
 		final File dir = new File(projectArtifactId);
 		dir.mkdirs();
-		
 
 		// AddonRegistry registry = ...
 		// Imported<InputComponentFactory> imported =
 		// registry.getServices(InputComponentFactory.class);
 		// InputComponentFactory factory = imported.get();
 
-		//System.out.println("Display UI: " + projectName);
-		//final String newProjectName = projectName.getValue().toString();
-		//System.out.println("Erstelle Projekt " + newProjectName);
-
+		// System.out.println("Display UI: " + projectName);
+		// final String newProjectName = projectName.getValue().toString();
+		// System.out.println("Erstelle Projekt " + newProjectName);
 
 		final Resource<File> projectDir = resourceFactory.create(dir);
-		log.info(log.out(),"Verwende als Projektverzeichnis " + projectDir);
+		log.info(log.out(), "Verwende als Projektverzeichnis " + projectDir);
 
-//		final DirectoryResource location = projectDir.reify(
-//				DirectoryResource.class).getOrCreateChildDirectory("test2");
-//		System.out.println("Location directory" + location);
+		// final DirectoryResource location = projectDir.reify(
+		// DirectoryResource.class).getOrCreateChildDirectory("test2");
+		// System.out.println("Location directory" + location);
 
 		List<Class<? extends ProjectFacet>> facets = new ArrayList<>();
 		facets.add(ResourcesFacet.class);
 		facets.add(MetadataFacet.class);
 		facets.add(JavaSourceFacet.class);
 		facets.add(JavaCompilerFacet.class);
-		final Project project = projectFactory.createProject(projectDir, buildSystem,
-				facets);
-		
-		
+		facets.add(MavenPluginFacet.class);
+		facets.add(DependencyFacet.class);
+		final Project project = projectFactory.createProject(projectDir,
+				buildSystem, facets);
+
 		final MetadataFacet metadata = project.getFacet(MetadataFacet.class);
 		metadata.setProjectName(projectArtifactId);
 		metadata.setProjectGroupName(projectGroupId);
 		metadata.setProjectVersion(projectVersion);
+
+		final DependencyFacet dependencydata = project
+				.getFacet(DependencyFacet.class);
+		// dependencydata.
 
 		return Results
 				.success("Command 'create-spring-boot-starter-project' successfully executed!");
