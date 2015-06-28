@@ -20,6 +20,8 @@ import org.jboss.forge.addon.projects.ProjectFactory;
 import org.jboss.forge.addon.projects.facets.DependencyFacet;
 import org.jboss.forge.addon.projects.facets.MetadataFacet;
 import org.jboss.forge.addon.projects.facets.ResourcesFacet;
+import org.jboss.forge.addon.resource.DirectoryResource;
+import org.jboss.forge.addon.resource.FileResource;
 import org.jboss.forge.addon.resource.Resource;
 import org.jboss.forge.addon.resource.ResourceFactory;
 import org.jboss.forge.addon.ui.command.AbstractUICommand;
@@ -36,6 +38,7 @@ import org.jboss.forge.addon.ui.result.Result;
 import org.jboss.forge.addon.ui.result.Results;
 import org.jboss.forge.addon.ui.util.Categories;
 import org.jboss.forge.addon.ui.util.Metadata;
+import org.jboss.forge.furnace.util.Streams;
 
 public class ProjectSetup extends AbstractUICommand {
 
@@ -48,8 +51,9 @@ public class ProjectSetup extends AbstractUICommand {
 			"spring-boot-starter-actuator", "spring-boot-starter-security",
 			"spring-boot-starter-test");
 
-	protected static final List<String> SPRING_BOOT_VERSIONS = Arrays
-			.asList("1.2.1.RELEASE","1.2.2.RELEASE","1.2.3.RELEASE","1.2.4.RELEASE","1.3.0.M1");
+	protected static final List<String> SPRING_BOOT_VERSIONS = Arrays.asList(
+			"1.2.1.RELEASE", "1.2.2.RELEASE", "1.2.3.RELEASE", "1.2.4.RELEASE",
+			"1.3.0.M1");
 
 	@Inject
 	protected ResourceFactory resourceFactory;
@@ -149,6 +153,9 @@ public class ProjectSetup extends AbstractUICommand {
 		facets.add(DependencyFacet.class);
 		final Project project = projectFactory.createProject(projectDir,
 				buildSystem, facets);
+		
+		generateReadme(project);
+		generateLicense(project);
 
 		final MetadataFacet metadata = project.getFacet(MetadataFacet.class);
 		// add project coordinates
@@ -166,15 +173,16 @@ public class ProjectSetup extends AbstractUICommand {
 		// <version>1.2.1.RELEASE</version>
 		// </parent>
 
-		final String springBootVersion=this.springBootVersion.getValue();
-		
+		final String springBootVersion = this.springBootVersion.getValue();
+
 		final DependencyFacet dependencyData = project
 				.getFacet(DependencyFacet.class);
 
 		for (String depStarterName : this.dependencies.getValue()) {
 			final Dependency dep = DependencyBuilder.create()
 					.setGroupId("org.springframework.boot")
-					.setArtifactId(depStarterName).setVersion(springBootVersion)
+					.setArtifactId(depStarterName)
+					.setVersion(springBootVersion)
 					// .setScopeType(org.jboss.forge.project.dependencies.ScopeType.Runtime);
 					.setScopeType("compile");
 			dependencyData.addDirectDependency(dep);
@@ -230,24 +238,42 @@ public class ProjectSetup extends AbstractUICommand {
 	// return project;
 	// }
 
-	// /**
-	// * @param project
-	// */
-	// protected void generateReadme(Project project) {
-	// final String readmeTemplate = Streams.toString(getClass()
-	// .getResourceAsStream("README.md"));
-	// FileResource<?> child = project.getRoot()
-	// .reify(DirectoryResource.class)
-	// .getChildOfType(FileResource.class, "README.md");
-	//
-	// // TODO: Replace with template addon
-	// MetadataFacet metadata = project.getFacet(MetadataFacet.class);
-	// String content = readmeTemplate.replaceAll(
-	// "\\{\\{ADDON_GROUP_ID\\}\\}", metadata.getProjectGroupName());
-	// content = content.replaceAll(
-	// "\\{\\{ADDON_ARTIFACT_ID\\}\\}", metadata.getProjectName());
-	// child.createNewFile();
-	// child.setContents(content);
-	// }
+	/**
+	 * @param project
+	 */
+	protected void generateReadme(Project project) {
+		final String readmeTemplate = Streams.toString(getClass()
+				.getResourceAsStream("README.md"));
+		final FileResource<?> child = project.getRoot()
+				.reify(DirectoryResource.class)
+				.getChildOfType(FileResource.class, "README.md");
+
+		// TODO: Replace with template addon
+		MetadataFacet metadata = project.getFacet(MetadataFacet.class);
+		String content = readmeTemplate.replaceAll(
+				"\\{\\{ADDON_GROUP_ID\\}\\}", metadata.getProjectGroupName());
+		content = content.replaceAll("\\{\\{ADDON_ARTIFACT_ID\\}\\}",
+				metadata.getProjectName());
+		child.createNewFile();
+		child.setContents(content);
+	}
+	
+
+	/**
+	 * @param project
+	 */
+	protected void generateLicense(Project project) {
+		
+		final String readmeTemplate = Streams.toString(getClass()
+				.getResourceAsStream("LICENSE"));
+		
+		final FileResource<?> child = project.getRoot()
+				.reify(DirectoryResource.class)
+				.getChildOfType(FileResource.class, "LICENSE");
+
+		child.createNewFile();
+		child.setContents(readmeTemplate.toString());
+	}
+
 
 }
