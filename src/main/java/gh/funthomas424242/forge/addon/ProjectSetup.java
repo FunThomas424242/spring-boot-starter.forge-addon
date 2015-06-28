@@ -7,7 +7,10 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import org.jboss.forge.addon.dependencies.Dependency;
+import org.jboss.forge.addon.dependencies.builder.DependencyBuilder;
 import org.jboss.forge.addon.maven.projects.MavenBuildSystem;
+import org.jboss.forge.addon.maven.projects.MavenFacet;
 import org.jboss.forge.addon.maven.projects.MavenPluginFacet;
 import org.jboss.forge.addon.parser.java.facets.JavaCompilerFacet;
 import org.jboss.forge.addon.parser.java.facets.JavaSourceFacet;
@@ -25,6 +28,7 @@ import org.jboss.forge.addon.ui.context.UIContext;
 import org.jboss.forge.addon.ui.context.UIExecutionContext;
 import org.jboss.forge.addon.ui.input.UIInput;
 import org.jboss.forge.addon.ui.input.UISelectMany;
+import org.jboss.forge.addon.ui.input.UISelectOne;
 import org.jboss.forge.addon.ui.metadata.UICommandMetadata;
 import org.jboss.forge.addon.ui.metadata.WithAttributes;
 import org.jboss.forge.addon.ui.output.UIOutput;
@@ -35,7 +39,17 @@ import org.jboss.forge.addon.ui.util.Metadata;
 
 public class ProjectSetup extends AbstractUICommand {
 
-	// public static final String PROJECT_CLASSIFIER = "testproject";
+	protected static final List<String> DEP_STARTER_LIST = Arrays.asList(
+			"spring-boot-starter-parent", "spring-boot-starter-batch",
+			"spring-boot-starter-jetty", "spring-boot-starter-tomcat",
+			"spring-boot-starter-logging", "spring-boot-starter-aop",
+			"spring-boot-starter-jpa", "spring-boot-starter-jetty-jdbc",
+			"spring-boot-starter-thymeleaf", "spring-boot-starter-web",
+			"spring-boot-starter-actuator", "spring-boot-starter-security",
+			"spring-boot-starter-test");
+
+	protected static final List<String> SPRING_BOOT_VERSIONS = Arrays
+			.asList("1.2.1.RELEASE","1.2.2.RELEASE","1.2.3.RELEASE","1.2.4.RELEASE","1.3.0.M1");
 
 	@Inject
 	protected ResourceFactory resourceFactory;
@@ -53,17 +67,12 @@ public class ProjectSetup extends AbstractUICommand {
 	// /////////////////////////////////////////////////////////////////////////
 
 	@Inject
-	@WithAttributes(label = "Bitten drücken Sie y und Bestätigen Sie mit Enter", required = true)
-	// only to go into the interactive mode
-	protected UIInput<String> seemless;
+	@WithAttributes(label = "Specific Name in spring-boot-starter-specificname:", required = true)
+	protected UIInput<String> specificName;
 
 	@Inject
 	@WithAttributes(label = "Group ID:", required = true, defaultValue = "gh.funthomas424242.springboot")
 	protected UIInput<String> groupId;
-
-	@Inject
-	@WithAttributes(label = "Artifact ID:", required = true, defaultValue = "spring-boot-starter-specificname")
-	protected UIInput<String> artifactId;
 
 	@Inject
 	@WithAttributes(label = "Version:", required = true, defaultValue = "1.0.0-SNAPSHOT")
@@ -71,7 +80,11 @@ public class ProjectSetup extends AbstractUICommand {
 
 	@Inject
 	@WithAttributes(label = "Dependencies", required = true)
-	private UISelectMany<String> dependencies;
+	protected UISelectMany<String> dependencies;
+
+	@Inject
+	@WithAttributes(label = "Spring Boot Version", required = true, defaultValue = "1.2.1.RELEASE")
+	protected UISelectOne<String> springBootVersion;
 
 	@Override
 	public UICommandMetadata getMetadata(UIContext context) {
@@ -83,21 +96,27 @@ public class ProjectSetup extends AbstractUICommand {
 	@Override
 	public void initializeUI(UIBuilder builder) throws Exception {
 
-		dependencies.setValueChoices(Arrays.asList("A", "B", "C", "AA", "BB")).setNote("Auswahl der Abhängigkeiten");
-		
+		dependencies.setValueChoices(DEP_STARTER_LIST).setNote(
+				"Auswahl der Abhängigkeiten");
+
+		springBootVersion.setValueChoices(SPRING_BOOT_VERSIONS).setNote(
+				"Auswahl der Spring Boot Version");
+
 		// add the inputs
-		builder.add(seemless);
+		builder.add(specificName);
 		builder.add(groupId);
-		builder.add(artifactId);
 		builder.add(version);
 		builder.add(dependencies);
+		builder.add(springBootVersion);
 	}
 
 	@Override
 	public Result execute(UIExecutionContext context) throws Exception {
 
 		final String projectGroupId = groupId.getValue();
-		final String projectArtifactId = artifactId.getValue();
+		final String specificProjectName = specificName.getValue();
+		final String projectArtifactId = "spring-boot-starter-"
+				+ specificProjectName;
 		final String projectVersion = version.getValue();
 
 		final UIOutput log = context.getUIContext().getProvider().getOutput();
@@ -132,13 +151,34 @@ public class ProjectSetup extends AbstractUICommand {
 				buildSystem, facets);
 
 		final MetadataFacet metadata = project.getFacet(MetadataFacet.class);
+		// add project coordinates
 		metadata.setProjectName(projectArtifactId);
 		metadata.setProjectGroupName(projectGroupId);
 		metadata.setProjectVersion(projectVersion);
 
-		final DependencyFacet dependencydata = project
+		// // add parent coordinates
+		// final MavenFacet mavenData = project
+		// .getFacet(MavenFacet.class);
+		// mavenData.
+		// <parent>
+		// <groupId>org.springframework.boot</groupId>
+		// <artifactId>spring-boot-starter-parent</artifactId>
+		// <version>1.2.1.RELEASE</version>
+		// </parent>
+
+		final String springBootVersion=this.springBootVersion.getValue();
+		
+		final DependencyFacet dependencyData = project
 				.getFacet(DependencyFacet.class);
-		// dependencydata.
+
+		for (String depStarterName : this.dependencies.getValue()) {
+			final Dependency dep = DependencyBuilder.create()
+					.setGroupId("org.springframework.boot")
+					.setArtifactId(depStarterName).setVersion(springBootVersion)
+					// .setScopeType(org.jboss.forge.project.dependencies.ScopeType.Runtime);
+					.setScopeType("compile");
+			dependencyData.addDirectDependency(dep);
+		}
 
 		return Results
 				.success("Command 'create-spring-boot-starter-project' successfully executed!");
