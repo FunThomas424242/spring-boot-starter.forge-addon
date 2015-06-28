@@ -179,12 +179,15 @@ public class ProjectSetup extends AbstractUICommand {
 				.getFacet(DependencyFacet.class);
 
 		for (String depStarterName : this.dependencies.getValue()) {
-			final Dependency dep = DependencyBuilder.create()
+			final DependencyBuilder dep = DependencyBuilder.create()
 					.setGroupId("org.springframework.boot")
 					.setArtifactId(depStarterName)
 					.setVersion(springBootVersion)
 					// .setScopeType(org.jboss.forge.project.dependencies.ScopeType.Runtime);
 					.setScopeType("compile");
+			if(depStarterName.endsWith("-parent")){
+				dep.setPackaging("pom");
+			}
 			dependencyData.addDirectDependency(dep);
 		}
 
